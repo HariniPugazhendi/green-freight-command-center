@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEA-INTEL · Green Freight Command Center</title>
+<link rel="stylesheet" href="css/styles.css?v=59">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR NAV ============ -->
+  <aside class="side">
+    <div class="brand">
+      <div class="logo">◈</div>
+      <div><b>SEA-INTEL</b><span>Green Freight Command</span></div>
+    </div>
+
+    <div class="grp">Overview</div>
+    <button class="navbtn active" data-view="home"><span class="ico">◈</span>Command Center</button>
+    <button class="navbtn" data-view="map"><span class="ico">✈</span>Route Map</button>
+    <button class="navbtn" data-view="decision"><span class="ico">★</span>AI Decision Center</button>
+
+    <div class="grp">Market</div>
+    <button class="navbtn" data-view="freight"><span class="ico">📈</span>Freight Intelligence</button>
+    <button class="navbtn" data-view="cargo"><span class="ico">▤</span>Cargo Demand</button>
+
+    <div class="grp">Operations</div>
+    <button class="navbtn" data-view="ports"><span class="ico">⚓</span>Port Intelligence</button>
+    <button class="navbtn" data-view="weather"><span class="ico">☁</span>Weather &amp; Disruption</button>
+
+    <div class="grp">Fleet &amp; Green</div>
+    <button class="navbtn" data-view="vessels"><span class="ico">⬢</span>Vessel Selector</button>
+    <button class="navbtn" data-view="fuel"><span class="ico">⛽</span>Fuel &amp; Emissions</button>
+
+    <div class="grp">Optimize</div>
+    <button class="navbtn" data-view="quantum"><span class="ico">⚛</span>Quantum Optimizer</button>
+    <button class="navbtn" data-view="whatif"><span class="ico">◇</span>What-If Simulator</button>
+
+    <div class="foot">
+      Simulated demo data layer.<br>
+      <span class="badge-demo">DEMO / SIMULATED</span>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="head">
+      <div class="dsp">
+        <h1>Green Freight Command Center
+          <small id="headCtx">Cargo 60,000 t · Australia → Visakhapatnam · Deadline 18 d</small>
+        </h1>
+      </div>
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="Search ports, vessels, fuels, routes, modules…" autocomplete="off" spellcheck="false" />
+        <kbd class="search-hint">/</kbd>
+        <div class="search-res" id="searchRes"></div>
+      </div>
+      <button class="btn small green" data-go="decision">Open AI Decision</button>
+      <button class="btn small ghost" data-go="whatif">What-If</button>
+    </header>
+
+    <div class="tape" id="tape"><div class="tape-inner" id="tapeInner"></div></div>
+
+    <div id="errBoard"></div>
+
+    <!-- ================= HOME ================= -->
+    <section class="view on" data-view="home">
+      <div class="view-head">
+        <div>
+          <span class="kick">Overview · live session snapshot</span>
+          <h2>Command Center <small id="hcSub">every figure below is recomputed by the shared engine</small></h2>
+        </div>
+        <button class="btn" id="btnDemo">▶ Run the 14-step demo</button>
+      </div>
+
+      <div class="pane">
+        <div class="ttl sec-ttl">Dashboard sections · one module per screen — click a tile to open</div>
+        <div class="sec-mosaic" id="secMosaic"></div>
+      </div>
+
+      <div class="strip pane" id="kpiStrip"></div>
+
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Decision pipeline</div>
+          <div class="pipe" id="pipeLine"></div>
+          <p class="sim-note" style="margin-top:12px">Market → demand → port → weather → fleet → fuel → optimizer → plan. Changing any input recomputes every stage.</p>
+        </div>
+        <div class="card">
+          <div class="ttl">Recommended plan · preview</div>
+          <div id="homePlan"></div>
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+            <button class="btn small" data-go="decision">Full plan + why →</button>
+            <button class="btn small ghost" data-go="quantum">Optimizer report →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid four pane" id="quickLaunch"></div>
+
+      <div class="card pane">
+        <div class="ttl">Guided demo log</div>
+        <div class="demo-log" id="demoLog"><span class="step">ready.</span> Press “Run the 14-step demo” to walk the pipeline.</div>
+      </div>
+    </section>
+
+    <!-- ================= FREIGHT ================= -->
+    <section class="view" data-view="freight">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 02 · market</span>
+          <h2>Freight Intelligence <small>forecast, charter timing, savings</small></h2>
+        </div>
+        <span class="tag t" id="frTag">—</span>
+      </div>
+
+      <div class="card pane">
+        <div class="ttl">Voyage inputs</div>
+        <div class="row">
+          <div class="field"><label>Origin</label><select id="fOrigin"></select></div>
+          <div class="field"><label>Destination</label><select id="fDest"></select></div>
+          <div class="field"><label>Cargo type</label><select id="fCargoType"></select></div>
+          <div class="field"><label>Quantity (tonnes)</label><input type="number" id="fQty" min="1000" max="150000" step="1000"></div>
+          <div class="field"><label>Deadline (days)</label><input type="number" id="fDeadline" min="5" max="60"></div>
+          <div class="field"><label></label><button class="btn" id="fGo">Apply</button></div>
+        </div>
+      </div>
+
+      <div class="grid three pane">
+        <div class="card kpi">
+          <div class="lbl">Current freight rate</div>
+          <div class="v" id="frCur">–</div>
+          <div class="sub down">simulated Baltic-style index</div>
+        </div>
+        <div class="card kpi">
+          <div class="lbl">Predicted · ~15 days</div>
+          <div class="v" id="frF15">–</div>
+          <div class="sub" id="frTrend">—</div>
+        </div>
+        <div class="card kpi">
+          <div class="lbl">Prediction confidence</div>
+          <div class="v" id="frConf">–</div>
+          <div class="sub">based on window sharpness</div>
+        </div>
+      </div>
+
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Rate forecast · 60-day horizon</div>
+          <div class="canvas-wrap" id="frChartWrap"><canvas id="frChart" data-h="280"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ttl">Predicted rates</div>
+          <div id="frPreds" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div class="sim-note" style="margin-top:10px">Plain-language read: <b id="frRead">—</b></div>
+        </div>
+      </div>
+
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Decision · best charter window</div>
+          <div id="frWindow"></div>
+        </div>
+        <div class="card">
+          <div class="ttl">Potential savings calculator</div>
+          <div id="frSave"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CARGO ================= -->
+    <section class="view" data-view="cargo">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 03 · market</span>
+          <h2>Cargo Demand Intelligence <small>tonnage pressure drives freight</small></h2>
+        </div>
+      </div>
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Monthly demand · Sep → Dec forecast</div>
+          <div id="cgForecast"></div>
+        </div>
+        <div class="card">
+          <div class="ttl">Demand → Freight linkage</div>
+          <div class="pipe" id="cgChain"></div>
+          <p class="sim-note" style="margin-top:12px" id="cgNote">—</p>
+        </div>
+      </div>
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Cargo volume by month (K tonnes)</div>
+          <div class="canvas-wrap" id="cgChartWrap"><canvas id="cgChart" data-h="280"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ttl">Demand growth analysis</div>
+          <div id="cgGrowth"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PORTS ================= -->
+    <section class="view" data-view="ports">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 04 · operations</span>
+          <h2>Port Intelligence <small>congestion, berths, draft, risk</small></h2>
+        </div>
+        <button class="btn small" data-go="map">Open on map →</button>
+      </div>
+      <div class="grid four pane" id="portCards"></div>
+      <div class="card pane" id="altPortCard"></div>
+    </section>
+
+    <!-- ================= WEATHER ================= -->
+    <section class="view" data-view="weather">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 05 · operations</span>
+          <h2>Weather &amp; Disruption Intelligence <small>sea state, ETA, cost impact</small></h2>
+        </div>
+      </div>
+      <div class="grid three pane">
+        <div class="card" style="display:flex;justify-content:center"><div id="wxRing"></div></div>
+        <div class="card" id="wxImp"></div>
+        <div class="card" id="wxAlt"></div>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Active sea-state events (simulated)</div>
+        <div id="wxEvents"></div>
+      </div>
+    </section>
+
+    <!-- ================= VESSELS ================= -->
+    <section class="view" data-view="vessels">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 06 · fleet</span>
+          <h2>Vessel Selection Engine <small>capacity · cost · ETA · fuel · CO₂ · risk</small></h2>
+        </div>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Comparison for current voyage</div>
+        <table class="tbl" id="vesselTbl"></table>
+        <p class="sim-note" style="margin-top:10px" id="vsNote">—</p>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Why this vessel</div>
+        <ul class="why" id="vsWhy"></ul>
+      </div>
+    </section>
+
+    <!-- ================= FUEL ================= -->
+    <section class="view" data-view="fuel">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 07 · green fleet</span>
+          <h2>Fuel Prediction &amp; Speed Optimization <small>speed in → fuel, cost, CO₂ out</small></h2>
+        </div>
+      </div>
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Speed impact (live)</div>
+          <div class="slider-row"><label>Speed</label><input type="range" id="spRange" min="10" max="17" step="0.1" value="13.1"><span class="pct" id="spVal">13.1 kn</span></div>
+          <div id="spOut"></div>
+        </div>
+        <div class="card">
+          <div class="ttl">Optimal cruising speed</div>
+          <div id="spOpt"></div>
+        </div>
+      </div>
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Fuel → speed curve</div>
+          <div class="canvas-wrap" id="fuChartWrap"><canvas id="fuChart" data-h="260"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ttl">Green fuel comparison · this voyage</div>
+          <table class="tbl" id="fuelTbl"></table>
+          <div style="margin-top:12px" class="row">
+            <button class="btn small" id="shoreBtn">Shore power: on</button>
+            <span class="sim-note">Shore-power flag shown when the destination port has infrastructure.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= MAP ================= -->
+    <section class="view" data-view="map">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 08 · spatial</span>
+          <h2>Route Map <small>grab to rotate · scroll to zoom · routes stay on the planet</small></h2>
+        </div>
+        <div class="row">
+          <button class="btn small" data-lane="A">Route A</button>
+          <button class="btn small" data-lane="B">Route B</button>
+          <button class="btn small" data-lane="C">Route C</button>
+          <button class="btn small ghost" data-go="weather">Weather risk →</button>
+        </div>
+      </div>
+      <div class="globe-box" id="globeBox">
+        <div id="globeTip"></div>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Map legend &amp; route rationale</div>
+        <div id="mapLegend"></div>
+      </div>
+    </section>
+
+    <!-- ================= QUANTUM ================= -->
+    <section class="view" data-view="quantum">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 09 · optimizer (problem 26138)</span>
+          <h2>Quantum-Inspired Optimization <small>annealing over vessel × route × speed × fuel × charter window</small></h2>
+        </div>
+        <button class="btn" id="optBtn">⚛ Run optimizer</button>
+      </div>
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Optimization priorities</div>
+          <div class="slider-row"><label>Cost</label><input type="range" class="wsl" data-k="cost" min="0" max="100"><span class="pct" id="wCost">70%</span></div>
+          <div class="slider-row"><label>Fuel</label><input type="range" class="wsl" data-k="fuel" min="0" max="100"><span class="pct" id="wFuel">60%</span></div>
+          <div class="slider-row"><label>Emissions</label><input type="range" class="wsl" data-k="emi" min="0" max="100"><span class="pct" id="wEmi">90%</span></div>
+          <div class="slider-row"><label>ETA</label><input type="range" class="wsl" data-k="eta" min="0" max="100"><span class="pct" id="wEta">80%</span></div>
+          <p class="sim-note" style="margin-top:8px">Priority changes shift vessel / route / speed / fuel choices through the same engine.</p>
+        </div>
+        <div class="card">
+          <div class="ttl">Result that matches current priorities</div>
+          <div id="optOut"></div>
+        </div>
+      </div>
+      <div class="grid two pane">
+        <div class="card" id="qBox"></div>
+        <div class="card" id="cBox"></div>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Optimizer method</div>
+        <div class="sim-note">Quantum-inspired simulated annealing over the full decision graph; objective = weighted (cost, fuel, CO₂, ETA-lateness). Runs and timings are measured live in your browser on each “Run optimizer”. Conventional baseline = greedy grid search over the same space.</div>
+      </div>
+    </section>
+
+    <!-- ================= WHAT-IF ================= -->
+    <section class="view" data-view="whatif">
+      <div class="view-head">
+        <div>
+          <span class="kick">Module 10 · simulation</span>
+          <h2>What-If Simulator <small>change a scenario → engine re-optimizes everything</small></h2>
+        </div>
+        <button class="btn green" id="wiReset">Reset scenarios</button>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Scenario switches</div>
+        <div class="row" id="wiChips"></div>
+      </div>
+      <div class="grid two pane">
+        <div class="card"><div class="ttl">Before</div><div id="wiBefore"></div></div>
+        <div class="card"><div class="ttl">After</div><div id="wiAfter"></div></div>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Why the recommendation changed</div>
+        <div id="wiWhy"></div>
+        <div class="grid four" id="wiDeltas" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <!-- ================= DECISION ================= -->
+    <section class="view" data-view="decision">
+      <div class="view-head">
+        <div>
+          <span class="kick">Output · everything above converges here</span>
+          <h2>AI Voyage Decision Center <small>one recommendation, fully explained</small></h2>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn small" data-go="map">Route →</button>
+          <button class="btn small ghost" data-go="whatif">Stress-test →</button>
+        </div>
+      </div>
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">🏆 Recommended plan</div>
+          <div id="decPlan"></div>
+        </div>
+        <div class="card" style="display:flex;justify-content:space-around;align-items:center;gap:16px">
+          <div id="decRing"></div>
+          <div id="decRingTxt"></div>
+        </div>
+      </div>
+      <div class="grid two pane">
+        <div class="card">
+          <div class="ttl">Expected results</div>
+          <div id="decResults"></div>
+        </div>
+        <div class="card">
+          <div class="ttl">Why did AI choose this?</div>
+          <ul class="why" id="decWhy"></ul>
+        </div>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Digital voyage summary</div>
+        <table class="tbl" id="decSummary"></table>
+      </div>
+      <div class="card pane">
+        <div class="ttl">Before / after optimization</div>
+        <div class="canvas-wrap" id="decChartWrap"><canvas id="decChart" data-h="280"></canvas></div>
+      </div>
+    </section>
+
+    <!-- modal -->
+    <div class="modal" id="portModal"><div class="box card" id="portModalBody"></div></div>
+  </div>
+</div>
+
+<div id="probe" style="display:none"></div>
+<script src="js/data.js?v=59"></script>
+<script src="js/engine.js?v=59"></script>
+<script src="js/charts.js?v=59"></script>
+<script src="js/globe2026z.js?v=59"></script>
+<script src="js/app.js?v=59"></script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEA-INTEL GLOBE · BUILD 10 · 3D LIVE</title>
+<link rel="stylesheet" href="css/styles.css?v=40">
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div id="gBanner" style="background:linear-gradient(90deg,#0e7490,#0e6fd8);color:#fff;text-align:center;font:700 20px/1 system-ui,sans-serif;letter-spacing:1px;padding:12px 16px;">SEA-INTEL · GLOBE LIVE · BUILD #10 · 2026</div>
+
+<header class="top">
+  <div class="brand">SEA-INTEL<span>east-coast India bulk desk</span></div>
+  <nav class="nav">
+    <button data-scroll="lanes" class="active">Trade lanes</button>
+    <button data-scroll="forecast">Freight</button>
+    <button data-scroll="ports">Ports</button>
+    <button data-scroll="fleet">Green fleet</button>
+    <button data-scroll="optimize">Optimize</button>
+    <button data-scroll="ask">Ask</button>
+  </nav>
+  <label class="lane-pick">Track <select id="laneSel"></select></label>
+</header>
+
+<div class="tape" id="tape"></div>
+
+<section class="hero">
+  <h1>Rates. Port fit. Green routes.<br>One desk for the eastern seaboard.</h1>
+  <p>Watch what bulk freight does, check whether each ship class can actually get into its port, steer around cyclone windows, and let the optimizer balance cost, fuel and CO₂ against your booking deadline — all from one tracked lane.</p>
+  <div class="kpis" id="heroKpis"></div>
+</section>
+
+<section id="lanes" class="sec">
+  <div class="wrap">
+  <div class="sec-head"><span class="kick">Trade lanes</span><h2>Four lanes feed India's east-coast ports</h2><p>Routes track the way real voyages go — over open water, past the choke points. Drag the globe, scroll to zoom, and click any route to focus it. <b class="buildmark" style="color:#0e7490">BUILD&nbsp;#10</b></p></div>
+  </div>
+  <div class="mapcard">
+    <div id="globeBox" class="ocean"></div>
+    <svg id="routeMap" class="ocean" viewBox="0 0 1000 520" style="display:none"></svg>
+    <div class="legend">
+      <span><i class="ex" style="background:#22d3ee"></i>coal route</span>
+      <span><i class="ex" style="background:#d97706"></i>live reroute</span>
+      <span><i class="ex" style="background:#dc2626"></i>load port</span>
+      <span><i class="ex" style="background:#059669"></i>discharge port</span>
+      <span class="ger">GER&nbsp;#10·2D·canvas·static</span>
+      <button class="chip mapmode" id="modeBtn" type="button">Use flat map</button>
+    </div>
+    <div class="globe-tip" id="globeTip"></div>
+  </div>
+  <div class="wrap">
+  <div class="g4" id="laneCards"></div>
+  </div>
+</section>
+
+<section id="forecast" class="sec">
+  <div class="wrap">
+  <div class="sec-head"><span class="kick">Freight</span><h2>What a tonne of cargo should cost you</h2><p>Today's rate, a 60-day outlook, and a straight answer on when to book.</p></div>
+  <div class="g4" id="rateKpis"></div>
+  <div class="g2">
+    <div class="card"><h3>Rate history → outlook</h3><div class="canvas-holder"><canvas id="rateChart" class="chart" width="520" height="260"></canvas><div class="tt"></div></div></div>
+    <div class="card"><h3>Spot vs rate contract</h3>
+      <div class="center-txt"><div class="lbl"><span>Book spot today</span><b id="coaSpot">—</b></div><div class="edge">current market, $/t</div></div>
+      <div class="center-txt"><div class="lbl"><span>Lock 6-month rate contract (COA)</span><b id="coaFix">—</b></div><div class="edge" id="coaDiff">—</div></div>
+      <div class="note" id="coaRec">—</div>
+      <div class="note soft" id="bunkerVal">—</div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>When to book</h3>
+      <div class="center-txt big"><b class="gauge" id="timingVal">—</b><div class="edge" id="freightWinWhy">—</div></div>
+      <div class="note soft" id="winNote">—</div>
+    </div>
+    <div class="card"><h3>Savings if you wait</h3>
+      <div class="center-txt big"><b class="gauge" id="saveVal">—</b><div class="edge" id="saveSub">—</div></div>
+      <div class="lbl two"><span>Total voyage cost</span><b id="calcVoyageCost">—</b></div>
+      <div class="lbl two"><span>Carbon cost (EU) inside</span><b id="calcCarbon">—</b></div>
+    </div>
+  </div>
+  </div>
+</section>
+
+<section id="ports" class="sec">
+  <div class="wrap">
+  <div class="sec-head"><span class="kick">Ports &amp; feasibility</span><h2>Can the ships actually get in?</h2><p>Draft, beam and berth slots decide which classes can call which port. Click a port card for the full picture.</p></div>
+  <div class="g4" id="portCards"></div>
+  <div class="g2">
+    <div class="card"><h3>Callable ports by vessel class</h3><table class="tbl" id="feasTbl"></table></div>
+    <div class="card"><h3>Port-wait &amp; idle-cost check</h3>
+      <label>Discharge port <select id="dmSel"></select></label>
+      <div class="kpis two">
+        <div class="center-txt"><div class="lbl"><span>Berth queue</span><b id="dmQueue">—</b></div><div class="edge">predicted wait</div></div>
+        <div class="center-txt"><div class="lbl"><span>Delay cost (demurrage)</span><b id="dmCost">—</b></div><div class="edge">daily penalty × queue days</div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+</section>
+
+<section id="fleet" class="sec">
+  <div class="wrap">
+  <div class="sec-head"><span class="kick">Green fleet</span><h2>Voyage economics meet emissions</h2><p>Every class earns a cleanliness grade, and the fuel mix decides how much CO₂ a voyage actually emits.</p></div>
+  <div class="g2">
+    <div class="card"><h3>Vessel classes on this lane</h3><table class="tbl" id="vessTbl"></table><div class="note soft" id="vessNote">—</div></div>
+    <div class="card"><h3>Fleet cleanliness grades</h3><table class="tbl" id="ciiTbl"></table><div class="note soft" id="complianceNote">—</div></div>
+  </div>
+  <div class="card"><h3>Alternative fuels — full-lifecycle CO₂ reductions</h3><table class="tbl" id="fuelTbl"></table><div class="note soft">Voyage fuel* is for the tracked lane at design speed with the shifted energy density included. Capex premium is over a conventional build.</div></div>
+  </div>
+</section>
+
+<section id="optimize" class="sec">
+  <div class="wrap">
+  <div class="sec-head"><span class="kick">Optimizer</span><h2>Pick the best fleet plan</h2><p>Weigh cost, fuel or CO₂, set the deadline, and the desk returns the plan that scores highest — then shows why.</p></div>
+  <div class="card panel">
+    <div class="ctrl">
+      <label>Voyage deadline <input id="optDeadline" type="number" min="18" max="75" value="32"></label>
+      <div class="weights" id="optWeights">
+        <span class="wlabel">Priorities</span>
+        <label class="chip w active" data-w="cost">cost</label>
+        <label class="chip w active" data-w="fuel">fuel</label>
+        <label class="chip w active" data-w="co2">CO₂</label>
+      </div>
+      <button class="btn primary" id="optRun">Run optimizer</button>
+    </div>
+    <div class="g2">
+      <div class="card"><h3>Recommended plan</h3><div class="plan" id="optPlan"><div class="edge">—</div></div><div class="note soft" id="optMeta">—</div></div>
+      <div class="card"><h3>Baseline vs plan</h3><div class="plan" id="optBase"><div class="edge">—</div></div><div class="note soft" id="optAdvice">—</div></div>
+    </div>
+  </div>
+  <div class="card"><h3>Quantum-inspired vs classical — how the two solvers compare</h3>
+    <div class="g2">
+      <div class="canvas-holder"><canvas id="benchChart" class="chart" width="520" height="240"></canvas></div>
+      <table class="tbl" id="benchTbl"></table>
+    </div>
+    <div class="note soft" id="benchNote">—</div>
+  </div>
+  </div>
+</section>
+
+<section id="ask" class="sec">
+  <div class="wrap">
+  <div class="sec-head"><span class="kick">Ask the desk</span><h2>Plain-language answers from the live numbers</h2><p>Questions are answered from the current state of this page — switch the lane at the top and ask again; the numbers follow.</p></div>
+  <div class="chat" id="chat">
+    <div class="bubble bot">Hello — track any lane at the top, then ask me anything about rates, ports, fuel or the fleet.</div>
+  </div>
+  <div class="chips" id="askChips">
+    <button class="chip" data-q="When should I book? What will freight do next?">When to book freight?</button>
+    <button class="chip" data-q="Should I take a COA or the spot rate?">COA or spot?</button>
+    <button class="chip" data-q="Which vessel class can call these ports?">Which ships fit the ports?</button>
+    <button class="chip" data-q="What is the landed cost per tonne?">Landed cost per tonne?</button>
+    <button class="chip" data-q="How bad is the waiting time and demurrage?">Port waiting &amp; demurrage?</button>
+    <button class="chip" data-q="What is my carbon exposure and how do fuel options change it?">Carbon &amp; fuels?</button>
+  </div>
+  <form class="askbar" id="askForm">
+    <input id="askIn" type="text" placeholder="Ask the desk…" autocomplete="off">
+    <button class="btn primary" type="submit">Send</button>
+  </form>
+  </div>
+</section>
+
+<footer>
+  <div>SEA-INTEL · demo build for a hackathon pitch — illustrative numbers, real methods, runs fully offline in your browser.</div>
+  <div class="soft">Trend, seasonality and Baltic index drive the rates · BDI <span id="footBdi">—</span> · fuel <span id="footFuel">—</span> · carbon <span id="footEua">—</span></div>
+</footer>
+
+<script src="js/data.js?v=33"></script>
+<script src="js/app.js?v=33"></script>
+<script src="js/globe2026z.js?v=1"></script>
+</body>
+</html>
