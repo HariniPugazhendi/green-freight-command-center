@@ -11,6 +11,7 @@
   let running = false;
 
   const view = { lng: 78, lat: 22, zoom: 1 };
+  const ZMIN = 0.75, ZMAX = 9;
   let R = 200;
   let W = 600;
   let H = 360;
@@ -25,7 +26,7 @@
   const ACTIVE = "#0e6fd8";
   const DIM = "rgba(148,163,184,0.5)";
 
-  const PORTS_GEO = window.PORTS_GEO || {};
+  function portsGeo() { return window.PORTS_GEO || {}; }
 
   const SRC = "img/ocean.jpg";
 
@@ -40,18 +41,23 @@
     const p = lat * D2R, L = lng * D2R;
     return [Math.cos(p) * Math.cos(L), Math.cos(p) * Math.sin(L), Math.sin(p)];
   }
-  function rotY(v, a) { const c = Math.cos(a), s = Math.sin(a); return [v[0] * c + v[2] * s, v[1], -v[0] * s + v[2] * c]; }
-  function rotX(v, a) { const c = Math.cos(a), s = Math.sin(a); return [v[0], v[1] * c - v[2] * s, v[1] * s + v[2] * c]; }
   function toView(v) {
-    v = rotY(v, -view.lng * D2R);
-    v = rotX(v, -view.lat * D2R);
-    return v;
+    const lat = Math.asin(Math.max(-1, Math.min(1, v[2])));
+    const cp = Math.cos(lat), sp = v[2];
+    const dl = Math.atan2(v[1], v[0]) - view.lng * D2R;
+    const cd = Math.cos(dl), sd = Math.sin(dl);
+    const la = view.lat * D2R, cl = Math.cos(la), sl = Math.sin(la);
+    return [cp * sd, cl * sp - sl * cp * cd, sl * sp + cl * cp * cd];
   }
   function toWorld(v) {
-    v = rotX(v, view.lat * D2R);
-    v = rotY(v, view.lng * D2R);
-    return v;
+    const la = view.lat * D2R, cl = Math.cos(la), sl = Math.sin(la);
+    const y = v[1], z = v[2];
+    const lat = Math.asin(Math.max(-1, Math.min(1, y * cl + z * sl)));
+    const dl = Math.atan2(v[0], -y * sl + z * cl);
+    return ll(lat / D2R, dl / D2R + view.lng);
   }
+
+  const TEXW = 2048, TEXH = 1024;
 
   function loadTexture() {
     return new Promise((resolve) => {
@@ -59,13 +65,16 @@
       img.onload = () => {
         try {
           const c = document.createElement("canvas");
-          c.width = 1024;
-          c.height = 512;
+          c.width = TEXW;
+          c.height = TEXH;
           const cx = c.getContext("2d");
           try { cx.filter = "brightness(1.3) saturate(1.45)"; } catch (e) { }
-          cx.drawImage(img, 0, 0, 1024, 512);
-          drawGraticule(cx, 1024, 512);
-          resolve(cx.getImageData(0, 0, 1024, 512));
+          const iw = img.naturalWidth || TEXW, ih = img.naturalHeight || TEXH;
+          const k = Math.min(TEXW / iw, TEXH / ih);
+          const dw = iw * k, dh = ih * k;
+          cx.drawImage(img, (TEXW - dw) / 2, (TEXH - dh) / 2, dw, dh);
+          drawGraticule(cx, TEXW, TEXH);
+          resolve(cx.getImageData(0, 0, TEXW, TEXH));
         } catch (e) { resolve(null); }
       };
       img.onerror = () => resolve(null);
@@ -348,12 +357,24 @@
     return pts;
   }
 
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
   function draw() {
     ctx.clearRect(0, 0, W, H);
     drawGlow();
     render();
     const hops = laneHops();
     const act = activeLane().id;
+    const mk = Math.max(0.45, Math.min(1.7, 1 / Math.pow(view.zoom, 0.55)));
     hitArcs = [];
     hops.forEach((h) => {
       const isAct = h.lane.id === act;
@@ -361,9 +382,11 @@
       hitArcs.push({ laneId: h.lane.id, pts: pts.slice() });
       ctx.beginPath();
       let started = false;
-      ctx.lineWidth = isAct ? 2.6 : 1;
+      ctx.lineWidth = isAct ? 2.6 * mk : 1;
       ctx.strokeStyle = isAct ? ACTIVE : DIM;
       ctx.globalAlpha = isAct ? 0.95 : 0.5;
+      if (isAct) { ctx.setLineDash([2.2 * mk, 3.4 * mk]); ctx.lineCap = "round"; }
+      else ctx.setLineDash([]);
       let lastV = null;
       pts.forEach((p) => {
         if (p.vis) {
@@ -390,23 +413,46 @@
       { lat: a[1], lng: a[0], color: "#dc2626", label: "Load · " + layer.load, r: 5 },
       { lat: b[1], lng: b[0], color: "#059669", label: "Discharge · " + layer.discharge, r: 5 }
     ];
-    Object.keys(PORTS_GEO).forEach((name) => {
-      const g = PORTS_GEO[name];
-      marks.push({ lat: g.lat, lng: g.lng, color: g.load ? "#f59e0b" : "#ffffff", label: name, r: g.load ? 5 : 3.5 });
+    const PG = portsGeo();
+    const near = (g, e) => Math.abs(g.lat - e[1]) < 0.01 && Math.abs(((g.lng - e[0] + 540) % 360) - 180) < 0.01;
+    Object.keys(PG).forEach((name) => {
+      const g = PG[name];
+      if (near(g, a) || near(g, b)) return;
+      marks.push({ lat: g.lat, lng: g.lng, color: "#ffffff", label: name, r: 3.5 });
     });
     marks.forEach((m) => {
       const w = ll(m.lat, m.lng);
       const p = project(w);
       if (!(p.z > 0.01)) return;
-      hitPoints.push({ label: m.label, x: p.x, y: p.y, r: m.r + 4 });
+      const key = m.label.indexOf("·") >= 0;
+      const big = key || view.zoom > 1.9;
+      const rr2 = m.r * mk;
+      hitPoints.push({ label: m.label, x: p.x, y: p.y, r: rr2 + 5 });
       ctx.beginPath();
-      ctx.arc(p.x, p.y, m.r + 2, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, rr2 + 2, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(255,255,255,0.35)";
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(p.x, p.y, m.r, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, rr2, 0, Math.PI * 2);
       ctx.fillStyle = m.color;
       ctx.fill();
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "rgba(11,19,43,0.6)";
+      ctx.stroke();
+      if (big) {
+        const nm = m.label.replace(/^(Load|Discharge) · /, "");
+        const txt = m.label.indexOf("Load") === 0 ? "▲ " + nm : m.label.indexOf("Discharge") === 0 ? "● " + nm : nm;
+        ctx.font = "700 " + (11 * mk).toFixed(1) + "px system-ui, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        const tw = ctx.measureText(txt).width;
+        const bx = p.x + rr2 + 5, by = p.y - 8 * mk;
+        ctx.fillStyle = "rgba(9,16,38,0.78)";
+        roundRect(bx, by, tw + 8, 16 * mk, 4);
+        ctx.fill();
+        ctx.fillStyle = key ? "#ffffff" : "rgba(226,240,255,0.92)";
+        ctx.fillText(txt, bx + 4, by + 8 * mk);
+      }
     });
 
     ctx.strokeStyle = "rgba(255,255,255,0.06)";
@@ -419,7 +465,7 @@
     ctx.textAlign = "right";
     ctx.textBaseline = "bottom";
     ctx.fillStyle = "rgba(210,235,255,0.55)";
-    ctx.fillText("GLOBEv27·2D·static", W - 10, H - 8);
+    ctx.fillText("GLOBEv28 · " + view.zoom.toFixed(1) + "× · dotted = active route", W - 10, H - 8);
   }
 
   function drawGlow() {
@@ -534,16 +580,98 @@
     const dx = e.clientX - downPx.x;
     const dy = e.clientY - downPx.y;
     moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
-    view.lng -= dx * 0.28;
-    view.lat = Math.max(-72, Math.min(72, view.lat - dy * 0.16));
+    const k = 57.2958 / Math.max(60, R);
+    view.lng -= dx * k;
+    view.lat = Math.max(-72, Math.min(72, view.lat - dy * k));
     downPx = { x: e.clientX, y: e.clientY };
     dirty = true;
   }
+  function radiusFor(z) { return Math.max(120, Math.round(Math.min(W, H) * 0.46 * z)); }
+  function unproject(sx, sy, rad) {
+    const rr = rad || R;
+    const nx = (sx - W / 2) / rr, ny = (H / 2 - sy) / rr;
+    const r2 = nx * nx + ny * ny;
+    if (r2 > 1) return null;
+    const nz = Math.sqrt(1 - r2);
+    return toWorld([nx, ny, nz]);
+  }
+  function screenOf(w, rad) {
+    const v = toView(w), rr = rad || R;
+    return { x: W / 2 + rr * v[0], y: H / 2 - rr * v[1], z: v[2] };
+  }
   function onWheel(e) {
     e.preventDefault();
-    view.zoom = Math.max(0.75, Math.min(2.1, view.zoom - e.deltaY * 0.0012));
+    const rect = cv.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * (W / rect.width);
+    const sy = (e.clientY - rect.top) * (H / rect.height);
+    const old = view.zoom;
+    const next = Math.max(ZMIN, Math.min(ZMAX, old * Math.pow(0.9988, e.deltaY)));
+    if (Math.abs(next - old) < 1e-9) return;
+    const nx = (sx - W / 2) / R, ny = (H / 2 - sy) / R;
+    const r2 = nx * nx + ny * ny;
+    if (r2 < 1) {
+      const anchor = toWorld([nx, ny, Math.sqrt(1 - r2)]);
+      view.zoom = next;
+      const Rnew = radiusFor(next);
+      for (let it = 0; it < 6; it++) {
+        const v = toView(anchor);
+        const px2 = W / 2 + Rnew * v[0];
+        const py2 = H / 2 - Rnew * v[1];
+        const dx = px2 - sx, dy = py2 - sy;
+        if (Math.abs(dx) < 0.35 && Math.abs(dy) < 0.35) break;
+        const la = view.lat * D2R, cl = Math.cos(la), sl = Math.sin(la);
+        const dl = (Math.atan2(anchor[1], anchor[0]) - view.lng * D2R);
+        const cp = Math.cos(Math.asin(Math.max(-1, Math.min(1, anchor[2]))));
+        const j11 = -Rnew * cp * Math.cos(dl);
+        const j21 = -Rnew * sl * cp * Math.sin(dl);
+        const j22 = Rnew * v[2];
+        if (Math.abs(j11) < 1e-6) break;
+        let dLng = -dx / j11;
+        let dLat = 0;
+        if (Math.abs(j22) > 1e-6) dLat = (-dy - j21 * dLng) / j22;
+        const nLng = view.lng + dLng / D2R;
+        const nLat = view.lat + dLat / D2R;
+        if (nLat > -72 && nLat < 72) { view.lat = nLat; view.lng = nLng; }
+        else if (nLng !== view.lng) { view.lng = nLng; }
+      }
+    } else {
+      view.zoom = next;
+    }
     dirty = true;
+    announceZoom();
   }
+  let lastAnnounced = -1;
+  function announceZoom() {
+    if (view.zoom === lastAnnounced) return;
+    lastAnnounced = view.zoom;
+    const el = document.getElementById("zoomLvl");
+    if (el) el.textContent = view.zoom.toFixed(1) + "×";
+    if (window.onGlobeZoom) { try { window.onGlobeZoom(view.zoom); } catch (e) { } }
+  }
+  function setZoom(z, lat, lng) {
+    view.zoom = Math.max(ZMIN, Math.min(ZMAX, z));
+    if (lat !== undefined) view.lat = Math.max(-72, Math.min(72, lat));
+    if (lng !== undefined) view.lng = lng;
+    dirty = true;
+    announceZoom();
+  }
+  function laneCenter() {
+    const l = activeLane();
+    const w = l.way;
+    let sx = 0, sy = 0, sz = 0;
+    w.forEach((p) => { const v = ll(p[1], p[0]); sx += v[0]; sy += v[1]; sz += v[2]; });
+    const n = w.length;
+    const v = [sx / n, sy / n, sz / n];
+    const m = Math.hypot(v[0], v[1], v[2]) || 1;
+    v[0] /= m; v[1] /= m; v[2] /= m;
+    return { lat: Math.asin(v[2]) / D2R, lng: Math.atan2(v[1], v[0]) / D2R };
+  }
+  window.zoomGlobe = setZoom;
+  window.focusGlobeLane = function (z) {
+    const c = laneCenter();
+    setZoom(z === undefined ? 2.4 : z, c.lat, c.lng);
+  };
+  window.globeZoom = function () { return view.zoom; };
   function onResize() { dirty = true; }
 
   function frame() {
@@ -615,7 +743,7 @@
           CH = clouds.height;
         } catch (e) { clouds = null; }
         window.globe2dTex = tex.width + "x" + tex.height;
-        if (running) { sizeCanvas(); dirty = true; }
+        if (running) { sizeCanvas(); dirty = true; announceZoom(); }
       });
       raf = requestAnimationFrame(frame);
       return true;
@@ -631,7 +759,7 @@
       const h = document.createElement("div");
       h.id = "globe2dHint";
       h.style.cssText = "position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);font:600 13px/1 system-ui;color:#fff;background:rgba(2,6,23,.45);padding:6px 12px;border-radius:999px;pointer-events:none;opacity:0;transition:opacity .5s;z-index:5;";
-      h.textContent = "routes pinned to the sea · grab to rotate · scroll to zoom";
+      h.textContent = "dotted line = your route · scroll to zoom in on a port · + / − / fit route";
       el.appendChild(h);
       setTimeout(() => { h.style.opacity = ".95"; }, 400);
       setTimeout(() => { h.style.opacity = "0"; }, 4200);

@@ -470,9 +470,21 @@
       setTimeout(() => { if (window.setupGlobe && !window.globeActive) window.setupGlobe(); }, 300);
     }
     if (!laneUserSet && r.rec) { state.laneId = r.rec.route.id; window.LANES = buildLanes(); if (window.refreshGlobe) refreshGlobe(); }
+    if (!laneUserSet && window.focusGlobeLane) window.focusGlobeLane(2.4);
     renderMapLegend();
     renderMapPath();
   };
+  function zoomBy(f) {
+    if (window.globeZoom) {
+      const z = window.globeZoom();
+      window.zoomGlobe(z * f);
+    }
+  }
+  function fitRoute() { if (window.focusGlobeLane) window.focusGlobeLane(2.4); }
+  function syncZoomLbl() {
+    const el = document.getElementById("zoomLvl");
+    if (el && window.globeZoom) el.textContent = window.globeZoom().toFixed(1) + "×";
+  }
   function renderMapPath() {
     const r = window.R; if (!r || r.error || !r.rec) return;
     const from = state.origin, to = r.pm;
@@ -507,10 +519,19 @@
     laneUserSet = true;
     window.LANES = buildLanes();
     if (window.refreshGlobe) refreshGlobe();
+    if (window.focusGlobeLane) window.focusGlobeLane(2.4);
     renderMapLegend();
     renderMapPath();
     $$("[data-lane]").forEach((b) => { b.className = "btn small" + (b.dataset.lane === id ? " green" : ""); });
   }
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-zin],[data-zout],[data-zfit]");
+    if (!t) return;
+    if (t.hasAttribute("data-zin")) zoomBy(1.5);
+    else if (t.hasAttribute("data-zout")) zoomBy(1 / 1.5);
+    else fitRoute();
+    setTimeout(syncZoomLbl, 30);
+  });
 
   /* ---------------- QUANTUM ---------------- */
   RENDERERS.quantum = function () {

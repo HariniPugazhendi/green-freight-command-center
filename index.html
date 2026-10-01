@@ -301,16 +301,27 @@
       <div class="view-head">
         <div>
           <span class="kick">Module 08 · spatial</span>
-          <h2>Route Map <small>grab to rotate · scroll to zoom · routes stay on the planet</small></h2>
+          <h2>Route Map <small>dotted line = your route · scroll or + / − to zoom into a port · fit route frames both ends</small></h2>
         </div>
         <div class="row">
           <button class="btn small" data-lane="A">Route A</button>
           <button class="btn small" data-lane="B">Route B</button>
           <button class="btn small" data-lane="C">Route C</button>
+          <span class="zoomer">
+            <button class="btn small ghost" data-zout="−" title="Zoom out">−</button>
+            <button class="btn small ghost" data-zfit="1" title="Frame the whole route">fit route</button>
+            <button class="btn small ghost" data-zin="+" title="Zoom in">+</button>
+          </span>
           <button class="btn small ghost" data-go="weather">Weather risk →</button>
         </div>
       </div>
       <div class="globe-box" id="globeBox">
+        <div class="globe-ctl">
+          <button class="btn small" data-zin="+">+</button>
+          <button class="btn small" data-zout="−">−</button>
+          <button class="btn small ghost" data-zfit="1">fit route</button>
+          <span id="zoomLvl" class="tag">1.0×</span>
+        </div>
         <div id="globeTip"></div>
       </div>
       <div class="card pane">
