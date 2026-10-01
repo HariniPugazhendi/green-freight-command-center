@@ -56,10 +56,18 @@
     return s;
   }
 
-  function recompute() {
-    window.R = computeAll(derivedState());
+  let laneGeom = null;
+  function syncLaneGeom() {
+    const use = (window.R && !window.R.error && window.R.portSel) ? PORTS[window.R.portSel] : state.dest;
+    laneGeom = syncRoutes(state.origin, use || state.dest);
     window.PORTS_GEO = buildPortsGeo();
     window.LANES = buildLanes();
+  }
+
+  function recompute() {
+    syncRoutes(state.origin, state.dest);
+    window.R = computeAll(derivedState());
+    syncLaneGeom();
     const r = window.R;
     const eb = $("#errBoard");
     if (eb) eb.innerHTML = r.error
@@ -411,13 +419,27 @@
     drawFuel();
     $("#shoreBtn").textContent = "Shore power: " + (state.shoreOn ? "on" : "off");
     $("#spOpt").innerHTML = "<div style='font:800 34px/1 system-ui;color:#0e7490'>" + r.rec.speed.toFixed(1) + " kn</div>" +
-      "<p style='margin:8px 0;color:#5b6b85;font-size:12.5px'>Meets the " + state.deadline + "-day window at " + r.rec.eta.toFixed(1) + " d ETA while cutting fuel vs high-speed steaming.</p>" +
+      "<p style='margin:8px 0;color:#5b6b85;font-size:12.5px'>Optimum for <b>" + r.rec.vessel.name + "</b> on <b>" + r.rec.route.label + "</b> (" + r.rec.route.dist.toLocaleString("en-IN") + " nm, " + r.pm.name + " discharge). Meets the " + state.deadline + "-day window at " + r.rec.eta.toFixed(1) + " d ETA while cutting fuel vs high-speed steaming.</p>" +
       "<div class='meter' style='max-width:280px'><i style='width:" + (100 - ((r.rec.speed - 10) / 7.5) * 100) + "%'></i></div>" +
       "<p class='sim-note'>Higher speed → higher fuel → higher cost → higher CO₂ (cubic powering law). Recommended " + r.rec.speed.toFixed(1) + " kn is the weighted optimum for your priorities.</p>";
   };
   function drawFuel() {
     const r = window.R; if (!r || r.error || !r.rec) return;
     const v = r.rec.vessel;
+    const util = (state.cargo / 1000 / v.cap) * 100;
+    $("#fuShip").innerHTML =
+      "<div class='ttl'>Voyage being optimised <span class='tag g'>" + v.name + "</span></div>" +
+      "<div style='display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end'>" +
+      [["Vessel", v.name + " · " + v.cap + "K dwt"],
+       ["Cargo on board", Math.round(state.cargo).toLocaleString("en-IN") + " t (" + util.toFixed(0) + "% of capacity)"],
+       ["Route", r.rec.route.label + " · " + r.rec.route.dist.toLocaleString("en-IN") + " nm"],
+       ["Load port", shortPort(state.origin.name)],
+       ["Discharge port", r.pm.name],
+       ["Fuel", r.rec.fuel.name],
+       ["Recommended speed", r.rec.speed.toFixed(1) + " kn"]
+      ].map((x) => "<div><div style='color:#5b6b85;font-size:10px;letter-spacing:.1em;text-transform:uppercase'>" + x[0] + "</div><div style='font:800 16px/1.3 system-ui'>" + x[1] + "</div></div>").join("") +
+      "</div>" +
+      "<p class='sim-note' style='margin-top:10px'>Every number on this page — the speed curve, fuel options, CO₂ and voyage cost — is computed for <b>" + v.name + "</b> on this exact lane. Change the vessel in Vessel Selection and this module re-computes for that ship.</p>";
     const s = parseFloat($("#spRange").value);
     const sf = vesselForward(derivedState(), v.id, r.rec.route.id, r.rec.fuel.id, s, r.portSel);
     $("#spVal").textContent = s.toFixed(1) + " kn";
@@ -439,7 +461,7 @@
   }
 
   /* ---------------- MAP ---------------- */
-  let globeBooted = false;
+  let globeBooted = false, laneUserSet = false;
   RENDERERS.map = function () {
     const r = window.R; if (!r) return;
     if (!globeBooted) {
@@ -447,23 +469,46 @@
       try { if (window.setupGlobe) window.setupGlobe(); } catch (e) { console.error(e); }
       setTimeout(() => { if (window.setupGlobe && !window.globeActive) window.setupGlobe(); }, 300);
     }
+    if (!laneUserSet && r.rec) { state.laneId = r.rec.route.id; window.LANES = buildLanes(); if (window.refreshGlobe) refreshGlobe(); }
     renderMapLegend();
+    renderMapPath();
   };
+  function renderMapPath() {
+    const r = window.R; if (!r || r.error || !r.rec) return;
+    const from = state.origin, to = r.pm;
+    const rr = ROUTES[state.laneId], wps = rr.way;
+    const mid = wps[Math.floor(wps.length / 2)];
+    const fmtLL = (p) => Math.abs(p[1]).toFixed(1) + (p[1] >= 0 ? "°N" : "°S") + " " + Math.abs(p[0]).toFixed(1) + (p[0] >= 0 ? "°E" : "°W");
+    $("#mapPath").innerHTML =
+      "<div style='display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end'>" +
+      [["Load port", shortPort(from.name), fmtLL([from.lng, from.lat])],
+       ["Discharge port", to.name, fmtLL([to.lng, to.lat])],
+       ["Route drawn", rr.label, wps.length + " surveyed waypoints"],
+       ["Great-circle distance", (laneGeom ? laneGeom.base : rr.dist).toLocaleString("en-IN") + " nm", "via " + fmtLL(mid)],
+       ["Recommended plan", r.rec.route.label, r.rec.vessel.name + " · " + r.rec.speed.toFixed(1) + " kn"]
+      ].map((x) => "<div><div style='color:#5b6b85;font-size:10px;letter-spacing:.1em;text-transform:uppercase'>" + x[0] + "</div>" +
+        "<div style='font:800 15px/1.4 system-ui'>" + x[1] + "</div>" +
+        "<div style='color:#7a8aa0;font:600 11px/1.3 var(--mono)'>" + x[2] + "</div></div>").join("") + "</div>" +
+      "<p class='sim-note' style='margin-top:10px'>Each route is rebuilt from your actual load port to the port the plan really discharges at, so the line on the globe is the voyage the engine priced. The highlighted lane is the one in your current plan; use the Route A/B/C buttons to inspect the alternatives.</p>";
+  }
   function renderMapLegend() {
     const r = window.R; if (!r) return;
     $("#mapLegend").innerHTML = Object.keys(ROUTES).map((k) => {
       const rr = ROUTES[k];
       const on = state.laneId === k;
-      return "<span style='display:inline-flex;align-items:center;gap:8px;margin-right:22px'><span style='width:24px;height:3px;background:" + rr.color + ";border-radius:3px'></span><b style='" + (on ? "color:#16324f" : "color:#5b6b85") + "'>" + rr.label + "</b><span style='color:#5d7397;font-size:11px'>" + rr.weatherRisk + "/100 risk · " + rr.dist.toLocaleString("en-IN") + " nm</span></span>";
+      const rec = r.rec && r.rec.route.id === k;
+      return "<span style='display:inline-flex;align-items:center;gap:8px;margin-right:22px'><span style='width:24px;height:3px;background:" + rr.color + ";border-radius:3px'></span><b style='" + (on ? "color:#16324f" : "color:#5b6b85") + "'>" + rr.label + "</b>" + (rec ? " <span class='tag g'>IN PLAN</span>" : "") + "<span style='color:#5d7397;font-size:11px'>" + rr.weatherRisk + "/100 risk · " + rr.dist.toLocaleString("en-IN") + " nm</span></span>";
     }).join("") +
-      "<p class='sim-note' style='margin-top:8px'>" + ROUTES[state.laneId].desc + " · recommended: <b>" + r.rec.route.label + "</b>. Click a lane button to focus it on the map.</p>";
+      "<p class='sim-note' style='margin-top:8px'>" + ROUTES[state.laneId].desc + " · recommended: <b>" + r.rec.route.label + "</b> (" + r.rec.route.dist.toLocaleString("en-IN") + " nm). Click a lane button to focus it on the map.</p>";
   }
 
   function setLane(id, ev) {
     state.laneId = id;
+    laneUserSet = true;
     window.LANES = buildLanes();
     if (window.refreshGlobe) refreshGlobe();
     renderMapLegend();
+    renderMapPath();
     $$("[data-lane]").forEach((b) => { b.className = "btn small" + (b.dataset.lane === id ? " green" : ""); });
   }
 
@@ -474,8 +519,9 @@
     ["cost", "fuel", "emi", "eta"].forEach((k) => { $("#w" + k[0].toUpperCase() + k.slice(1)).textContent = state.weights[k] + "%"; });
     drawOpt();
   };
+  let lastRec = null;
   function drawOpt() {
-    const r = window.R; if (!r) return;
+    const r = window.R; if (!r || r.error || !r.rec) return;
     const rec = r.rec;
     $("#optOut").innerHTML = [
       ["Vessel", rec.vessel.name],
@@ -485,7 +531,34 @@
       ["Charter window", "days " + r.window.start + "–" + r.window.end],
       ["Total cost", IN_K(rec.total)],
       ["Objective score", rec.score.toFixed(3)]
-    ].map((x) => "<div style='display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #e7edf5'><span style='color:#5b6b85'>" + x[0] + "</span><b>" + x[1] + "</b></div>").join("");
+    ].map((x) => "<div style='display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #e7edf5'><span style='color:#5b6b85'>" + x[0] + "</span><b>" + x[1] + "</b></div>").join("") +
+      "<p class='sim-note' style='margin-top:10px'>Objective = weighted sum of cost, fuel, CO₂ and ETA. Move any priority slider and these bars re-weight instantly.</p>";
+    const p = rec.objParts;
+    if (p) {
+      const mx = Math.max(p.cost, p.fuel, p.emi, p.eta, p.lat, 0.0001);
+      const bar = (k, lbl, v, w) => "<div style='display:flex;align-items:center;gap:8px;padding:4px 0'>" +
+        "<span style='flex:0 0 92px;color:#5b6b85;font-size:11px'>" + lbl + " " + w + "%</span>" +
+        "<span style='flex:1;height:7px;border-radius:99px;background:#e8eef6;overflow:hidden'><i style='display:block;height:100%;width:" + ((v / mx) * 100).toFixed(1) + "%;background:linear-gradient(90deg,#0e7490,#22d3ee)'></i></span>" +
+        "<b style='flex:0 0 46px;text-align:right;font:700 11px/1 var(--mono)'>" + v.toFixed(3) + "</b></div>";
+      const sig = rec.vessel.id + "|" + rec.route.id + "|" + rec.fuel.id + "|" + rec.speed.toFixed(1);
+      const changed = lastRec && lastRec !== sig;
+      const which = [];
+      if (lastRec && lastRec.split("|")[0] !== rec.vessel.id) which.push("vessel");
+      if (lastRec && lastRec.split("|")[1] !== rec.route.id) which.push("route");
+      if (lastRec && lastRec.split("|")[2] !== rec.fuel.id) which.push("fuel");
+      if (lastRec && lastRec.split("|")[3] !== rec.speed.toFixed(1)) which.push("speed");
+      $("#qWhy").innerHTML =
+        "<div class='ttl'>How your priorities scored this plan</div>" +
+        bar("cost", "Cost", p.cost, p.w.cost) + bar("fuel", "Fuel", p.fuel, p.w.fuel) +
+        bar("emi", "CO₂", p.emi, p.w.emi) + bar("eta", "ETA", p.eta, p.w.eta) +
+        (p.lat > 0.001 ? bar("lat", "Lateness", p.lat, "—") : "") +
+        "<div class='ttl' style='margin-top:12px'>Fleet eligibility for this voyage</div>" +
+        r.fleetFit.map((f) => "<div style='display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:11.5px;border-bottom:1px solid #eef2f8'>" +
+          "<span><b>" + f.name + "</b> <span style='color:#7a8aa0'>" + f.cap + "K dwt</span></span>" +
+          "<span style='color:" + (f.chosen ? "#059669" : f.feasible ? "#0e7490" : "#b45309") + ";font-weight:700'>" + (f.chosen ? "✓ selected" : f.feasible ? "eligible" : f.why) + "</span></div>").join("") +
+        "<p class='sim-note' style='margin-top:10px'>" + (changed ? "Priority change → switched <b>" + (which.join(", ") || "plan") + "</b>." : lastRec ? "Same plan still wins under these weights — the bars above show why it is hard to beat." : "Adjust a priority slider to see the optimizer re-choose vessel, route, speed or fuel.") + "</p>";
+      lastRec = sig;
+    }
     $("#qBox").innerHTML = "<div class='ttl'>Quantum-inspired optimizer <span class='tag t'>annealing</span></div>" +
       kv("Solution quality", (r.q.quality * 100).toFixed(1) + "%") +
       kv("Evaluated combinations", r.q.iters.toLocaleString("en-IN")) +

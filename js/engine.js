@@ -48,6 +48,49 @@ function haversineNm(a, b) {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 function shortPort(nm) { return nm.replace(/\s*\(.*\)/, ""); }
+function gcPoint(a, b, t) {
+  const rad = Math.PI / 180;
+  const la1 = a.lat * rad, lo1 = a.lng * rad, la2 = b.lat * rad, lo2 = b.lng * rad;
+  const sd = Math.sin((la2 - la1) / 2), sl = Math.sin((lo2 - lo1) / 2);
+  const h = sd * sd + Math.cos(la1) * Math.cos(la2) * sl * sl;
+  const d = 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+  if (d < 1e-9) return { lat: a.lat, lng: a.lng };
+  const A = Math.sin((1 - t) * d) / Math.sin(d), B = Math.sin(t * d) / Math.sin(d);
+  const x = A * Math.cos(la1) * Math.cos(lo1) + B * Math.cos(la2) * Math.cos(lo2);
+  const y = A * Math.cos(la1) * Math.sin(lo1) + B * Math.cos(la2) * Math.sin(lo2);
+  const z = A * Math.sin(la1) + B * Math.sin(la2);
+  return { lat: Math.atan2(z, Math.sqrt(x * x + y * y)) / rad, lng: Math.atan2(y, x) / rad };
+}
+function shiftNm(p, a, b, nm) {
+  const rad = Math.PI / 180;
+  const brg = Math.atan2(
+    Math.sin((b.lng - a.lng) * rad) * Math.cos(b.lat * rad),
+    Math.cos(a.lat * rad) * Math.sin(b.lat * rad) - Math.sin(a.lat * rad) * Math.cos(b.lat * rad) * Math.cos((b.lng - a.lng) * rad)
+  );
+  const nb = brg + (nm >= 0 ? Math.PI / 2 : -Math.PI / 2);
+  const dLat = (nm / 60) * Math.cos(nb);
+  const dLng = (nm / 60) * Math.sin(nb) / (Math.cos(p.lat * rad) || 1e-6);
+  return { lat: p.lat + dLat, lng: p.lng + dLng };
+}
+/* Rebuilds every route so its path really runs from the chosen load port to the chosen
+   discharge port. A = straight great-circle, B = offset corridor, C = wide northerly detour. */
+function syncRoutes(o, d) {
+  const A = o || ORIGINS[0], B = d || DESTINATIONS[0];
+  const base = haversineNm(A, B);
+  const OFF = { A: 0, B: 140, C: 480 }, SGN = { A: 0, B: -1, C: 1 };
+  Object.keys(ROUTES).forEach((k) => {
+    const r = ROUTES[k], off = OFF[k] || 0, sgn = SGN[k] || 0, N = 9, pts = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      let p = gcPoint(A, B, t);
+      if (off) p = shiftNm(p, A, B, off * sgn * Math.sin(Math.PI * t));
+      pts.push([Math.round(p.lng * 1e4) / 1e4, Math.round(p.lat * 1e4) / 1e4]);
+    }
+    r.way = pts;
+    r.dist = Math.round(base + Math.abs(off) * 0.62);
+  });
+  return { base: Math.round(base), from: A, to: B };
+}
 function lanePremium(S) {
   const nm = haversineNm(S.origin, S.dest);
   const dist = (nm / 1000) * 1.15;
@@ -184,7 +227,8 @@ function optimalSpeed(S, vsel, routeId, fuelId, portId, step) {
   for (let s = 10; s <= 17.5; s += st) {
     const sf = vesselForward(S, vsel, routeId, fuelId, s, portId);
     const dl = S.deadline + (S.whatIf.deadlineShort ? -2 : 0);
-    const lat = sf.eta > dl * 1.12 ? 2.6 : sf.eta > dl ? 1.4 : 0;
+    const latW = 0.2 + (w.eta / 100) * 0.8;
+    const lat = (sf.eta > dl * 1.12 ? 2.6 : sf.eta > dl ? 1.4 : 0) * latW;
     const cNorm = sf.total / refScalar.cost;
     const fuelNorm = sf.cons / refScalar.fuel;
     const emiNorm = sf.co2 / refScalar.co2;
@@ -195,16 +239,25 @@ function optimalSpeed(S, vsel, routeId, fuelId, portId, step) {
   return best;
 }
 
-function solutionScore(S, sol) {
+function solutionParts(S, sol) {
   const w = S.weights;
   const cNorm = sol.total / S._refScalar.cost;
   const fuelNorm = sol.cons / S._refScalar.fuel;
   const emiNorm = sol.co2 / S._refScalar.co2;
   const dl = S.deadline + (S.whatIf.deadlineShort ? -2 : 0);
-  const lat = sol.eta > dl * 1.12 ? 2.8 : sol.eta > dl ? 1.5 : 0;
+  const latW = 0.2 + (w.eta / 100) * 0.8;
+  const lat = (sol.eta > dl * 1.12 ? 2.8 : sol.eta > dl ? 1.5 : 0) * latW;
   const etaNorm = sol.eta / Math.max(1, dl);
-  return (w.cost / 100) * cNorm + (w.fuel / 100) * fuelNorm + (w.emi / 100) * emiNorm + (w.eta / 100) * (0.6 + etaNorm * 0.4) + lat;
+  const p = {
+    cost: (w.cost / 100) * cNorm, fuel: (w.fuel / 100) * fuelNorm,
+    emi: (w.emi / 100) * emiNorm, eta: (w.eta / 100) * (0.6 + etaNorm * 0.4), lat
+  };
+  p.total = p.cost + p.fuel + p.emi + p.eta + p.lat;
+  p.w = { cost: w.cost, fuel: w.fuel, emi: w.emi, eta: w.eta };
+  p.raw = { cost: cNorm, fuel: fuelNorm, emi: emiNorm, eta: etaNorm };
+  return p;
 }
+function solutionScore(S, sol) { return solutionParts(S, sol).total; }
 
 const RIDS = Object.keys(ROUTES);
 function candidate(S, vi, ri, fi, portSel) {
@@ -369,7 +422,15 @@ function computeAll(S) {
   const savings = Math.max(0, (market.cur - window.lo) * S.cargo);
 
   S._optIts = q.iters;
-  return { S, portSel, pm, portPrimary, altRec, altUsed, wm, market, window, cargo, risk, rec, fuelBrowser, bestFuel, q, c, why: whyPanel(S, rec), savings };
+  rec.objParts = solutionParts(S, rec);
+  const fleetFit = VESSELS.map((v) => {
+    const capOk = S.cargo / 1000 <= v.cap * 1.05, portOk = v.ports.indexOf(portSel) >= 0;
+    return {
+      name: v.name, cap: v.cap, feasible: capOk && portOk, chosen: v.id === rec.vessel.id,
+      why: !portOk ? "does not call " + PORTS[portSel].name : !capOk ? "too small for " + Math.round(S.cargo / 1000) + "K t" : "eligible"
+    };
+  });
+  return { S, portSel, pm, portPrimary, altRec, altUsed, wm, market, window, cargo, risk, rec, fleetFit, fuelBrowser, bestFuel, q, c, why: whyPanel(S, rec), savings };
 }
 
 function baselineResults(S) {
