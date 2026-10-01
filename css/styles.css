@@ -415,6 +415,17 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .strip .min .v { font: 800 20px/1.1 system-ui; color: var(--navy); }
 .strip .min .lbl { font: 600 9.5px/1.2 system-ui; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); margin-top: 5px; }
 
+/* Module groups (Command Center) — mirrors the sidebar taxonomy */
+.mod-group { margin-bottom: 16px; }
+.mod-group:last-child { margin-bottom: 0; }
+.mod-group-h {
+  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  margin: 0 0 9px; padding-bottom: 6px; border-bottom: 1px solid var(--line);
+}
+.mod-group-h b { font: 800 12px/1 system-ui; letter-spacing: .1em; text-transform: uppercase; color: var(--navy); }
+.mod-group-h span { color: var(--ink3); font-size: 11px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 12px; }
+
 /* Section mosaic (dashboard top) */
 .sec-ttl { margin: 0 0 10px; color: var(--ink3); }
 .sec-mosaic { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SEA-INTEL · Green Freight Command Center</title>
-<link rel="stylesheet" href="css/styles.css?v=63">
+<link rel="stylesheet" href="css/styles.css?v=66">
 </head>
 <body>
 
@@ -76,30 +76,28 @@
         <button class="btn" id="btnDemo">▶ Run the 14-step demo</button>
       </div>
 
-      <div class="pane">
-        <div class="ttl sec-ttl">Dashboard sections · one module per screen — click a tile to open</div>
-        <div class="sec-mosaic" id="secMosaic"></div>
-      </div>
-
       <div class="strip pane" id="kpiStrip"></div>
 
       <div class="grid two pane">
         <div class="card">
-          <div class="ttl">Decision pipeline</div>
-          <div class="pipe" id="pipeLine"></div>
-          <p class="sim-note" style="margin-top:12px">Market → demand → port → weather → fleet → fuel → optimizer → plan. Changing any input recomputes every stage.</p>
-        </div>
-        <div class="card">
-          <div class="ttl">Recommended plan · preview</div>
+          <div class="ttl">Recommended plan</div>
           <div id="homePlan"></div>
           <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
             <button class="btn small" data-go="decision">Full plan + why →</button>
             <button class="btn small ghost" data-go="quantum">Optimizer report →</button>
           </div>
         </div>
+        <div class="card">
+          <div class="ttl">Decision pipeline</div>
+          <div class="pipe" id="pipeLine"></div>
+          <p class="sim-note" style="margin-top:12px">Market → demand → port → weather → fleet → fuel → optimizer → plan. Changing any input recomputes every stage.</p>
+        </div>
       </div>
 
-      <div class="grid four pane" id="quickLaunch"></div>
+      <div class="pane">
+        <div class="ttl sec-ttl">Modules · grouped as in the sidebar</div>
+        <div id="secMosaic"></div>
+      </div>
 
       <div class="card pane">
         <div class="ttl">Guided demo log</div>
@@ -440,10 +438,11 @@
 </div>
 
 <div id="probe" style="display:none"></div>
-<script src="js/data.js?v=63"></script>
-<script src="js/engine.js?v=63"></script>
-<script src="js/charts.js?v=63"></script>
-<script src="js/globe2026z.js?v=63"></script>
-<script src="js/app.js?v=63"></script>
+<script src="js/data.js?v=66"></script>
+<script src="js/sea-routes.js?v=66"></script>
+<script src="js/engine.js?v=66"></script>
+<script src="js/charts.js?v=66"></script>
+<script src="js/globe2026z.js?v=66"></script>
+<script src="js/app.js?v=66"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    SEA-INTEL · Green Freight Command Center
    DATA LAYER  (SIMULATED / DEMO)
    All figures in this file are realistic demo values used for
@@ -9,19 +9,25 @@
 window.DEMO = true;
 
 const ORIGINS = [
-  { id: "AUS", name: "Australia (Hay Point / Newcastle)", lat: -21.25, lng: 149.3, rateAdj: 9.4 },
-  { id: "BRA", name: "Brazil (Tubarao)", lat: -28.24, lng: -48.65, rateAdj: 11.2 },
-  { id: "SA", name: "South Africa (Richards Bay)", lat: -28.78, lng: 32.03, rateAdj: 7.1 },
-  { id: "IDN", name: "Indonesia (Balikpapan)", lat: -1.26, lng: 116.83, rateAdj: 3.2 },
-  { id: "CHN", name: "China (Qinhuangdao)", lat: 39.93, lng: 119.67, rateAdj: 5.1 }
+  { id: "AUS", name: "Australia (Hay Point / Newcastle)", lat: -21.25, lng: 149.3, rateAdj: 9.4, port: "HPT" },
+  { id: "BRA", name: "Brazil (Tubarao)", lat: -28.24, lng: -48.65, rateAdj: 11.2, port: "TUB" },
+  { id: "SA", name: "South Africa (Richards Bay)", lat: -28.78, lng: 32.03, rateAdj: 7.1, port: "RGB" },
+  { id: "IDN", name: "Indonesia (Balikpapan)", lat: -1.26, lng: 116.83, rateAdj: 3.2, port: "BAL" },
+  { id: "CHN", name: "China (Qinhuangdao)", lat: 39.93, lng: 119.67, rateAdj: 5.1, port: "QIN" },
+  { id: "IDN2", name: "Indonesia (Bukit Timah)", lat: 1.17, lng: 117.5, rateAdj: 3.4, port: "BUK" },
+  { id: "ZAF2", name: "South Africa (Saldanha)", lat: -33.03, lng: 17.95, rateAdj: 7.6, port: "SAL" },
+  { id: "USA", name: "USA (Houston)", lat: 29.73, lng: -95.27, rateAdj: 12.4, port: "HOU" }
 ];
 
 const DESTINATIONS = [
-  { id: "VIZ", name: "Visakhapatnam", lat: 17.68, lng: 83.3, rateAdj: 0 },
-  { id: "CHE", name: "Chennai", lat: 13.08, lng: 80.29, rateAdj: 1.9 },
-  { id: "KRI", name: "Krishnapatnam", lat: 14.27, lng: 80.13, rateAdj: -0.5 },
-  { id: "KDP", name: "Kandla", lat: 23.03, lng: 70.22, rateAdj: 1.1 },
-  { id: "PRD", name: "Paradip", lat: 20.24, lng: 86.68, rateAdj: 0.4 }
+  { id: "VIZ", name: "Visakhapatnam", lat: 17.68, lng: 83.3, rateAdj: 0, port: "VIZ" },
+  { id: "CHE", name: "Chennai", lat: 13.08, lng: 80.29, rateAdj: 1.9, port: "CHE" },
+  { id: "KRI", name: "Krishnapatnam", lat: 14.27, lng: 80.13, rateAdj: -0.5, port: "KRI" },
+  { id: "KDP", name: "Kandla", lat: 23.03, lng: 70.22, rateAdj: 1.1, port: "KDP" },
+  { id: "PRD", name: "Paradip", lat: 20.24, lng: 86.68, rateAdj: 0.4, port: "PRD" },
+  { id: "MUN", name: "Mundra", lat: 22.84, lng: 69.72, rateAdj: 1.6, port: "MUN" },
+  { id: "JNP", name: "JNPT / Nhava Sheva", lat: 18.95, lng: 72.95, rateAdj: 2.4, port: "JNP" },
+  { id: "COK", name: "Cochin", lat: 9.97, lng: 76.26, rateAdj: 2.1, port: "COK" }
 ];
 
 const CARGO_TYPES = [
@@ -33,23 +39,45 @@ const CARGO_TYPES = [
 ];
 
 const PORTS = {
-  VIZ: { name: "Visakhapatnam", lat: 17.68, lng: 83.3, congestion: 26, wait: 12, berth: 82, draft: 17.0, risk: 32, shorePower: true, country: "India" },
+  VIZ: { name: "Visakhapatnam", lat: 17.68, lng: 83.3, congestion: 26, wait: 12, berth: 82, draft: 18.5, risk: 32, shorePower: true, country: "India" },
   CHE: { name: "Chennai", lat: 13.08, lng: 80.29, congestion: 74, wait: 34, berth: 51, draft: 15.0, risk: 58, shorePower: false, country: "India" },
   KRI: { name: "Krishnapatnam", lat: 14.27, lng: 80.13, congestion: 47, wait: 19, berth: 64, draft: 16.5, risk: 44, shorePower: true, country: "India" },
   KDP: { name: "Kandla", lat: 23.03, lng: 70.22, congestion: 38, wait: 15, berth: 73, draft: 14.5, risk: 40, shorePower: false, country: "India" },
-  PRD: { name: "Paradip", lat: 20.24, lng: 86.68, congestion: 33, wait: 14, berth: 78, draft: 18.2, risk: 36, shorePower: true, country: "India" },
+  PRD: { name: "Paradip", lat: 20.24, lng: 86.68, congestion: 33, wait: 14, berth: 78, draft: 21.0, risk: 36, shorePower: true, country: "India" },
+  MUN: { name: "Mundra", lat: 22.84, lng: 69.72, congestion: 29, wait: 11, berth: 84, draft: 20.5, risk: 30, shorePower: true, country: "India" },
+  JNP: { name: "JNPT / Nhava Sheva", lat: 18.95, lng: 72.95, congestion: 61, wait: 27, berth: 57, draft: 16.5, risk: 51, shorePower: true, country: "India" },
+  COK: { name: "Cochin", lat: 9.97, lng: 76.26, congestion: 44, wait: 17, berth: 66, draft: 12.5, risk: 41, shorePower: false, country: "India" },
   HPT: { name: "Hay Point", lat: -21.25, lng: 149.3, congestion: 42, wait: 18, berth: 68, draft: 18.5, risk: 48, shorePower: false, country: "Australia" },
   TUB: { name: "Tubarao", lat: -28.24, lng: -48.65, congestion: 39, wait: 16, berth: 70, draft: 19.0, risk: 45, shorePower: false, country: "Brazil" },
-  RGB: { name: "Richards Bay", lat: -28.78, lng: 32.03, congestion: 31, wait: 12, berth: 81, draft: 17.5, risk: 38, shorePower: false, country: "South Africa" }
+  RGB: { name: "Richards Bay", lat: -28.78, lng: 32.03, congestion: 31, wait: 12, berth: 81, draft: 17.5, risk: 38, shorePower: false, country: "South Africa" },
+  BAL: { name: "Balikpapan", lat: -1.26, lng: 116.83, congestion: 52, wait: 21, berth: 62, draft: 15.5, risk: 47, shorePower: false, country: "Indonesia" },
+  QIN: { name: "Qinhuangdao", lat: 39.93, lng: 119.67, congestion: 68, wait: 30, berth: 54, draft: 20.5, risk: 56, shorePower: false, country: "China" },
+  BUK: { name: "Bukit Timah", lat: 1.17, lng: 117.5, congestion: 46, wait: 18, berth: 65, draft: 14.0, risk: 42, shorePower: false, country: "Indonesia" },
+  SAL: { name: "Saldanha", lat: -33.03, lng: 17.95, congestion: 28, wait: 11, berth: 83, draft: 19.5, risk: 34, shorePower: false, country: "South Africa" },
+  HOU: { name: "Houston", lat: 29.73, lng: -95.27, congestion: 57, wait: 24, berth: 59, draft: 17.5, risk: 49, shorePower: true, country: "United States" },
+  SGP: { name: "Singapore", lat: 1.29, lng: 103.85, congestion: 71, wait: 29, berth: 53, draft: 17.0, risk: 54, shorePower: true, country: "Singapore" },
+  LKA: { name: "Colombo", lat: 6.95, lng: 79.84, congestion: 63, wait: 25, berth: 58, draft: 16.0, risk: 50, shorePower: true, country: "Sri Lanka" },
+  DUR: { name: "Durban", lat: -29.87, lng: 31.03, congestion: 49, wait: 20, berth: 63, draft: 18.0, risk: 43, shorePower: false, country: "South Africa" }
 };
 
-const PORT_ALT = { CHE: ["KRI", "VIZ"], VIZ: ["PRD", "KRI"], KRI: ["VIZ", "CHE"], KDP: ["PRD"], PRD: ["VIZ", "KRI"] };
+// Alternative discharge ports, tried when the chosen one is congested or no
+// vessel can serve it. Ordered nearest-first so the cost estimate is sensible.
+const PORT_ALT = {
+  VIZ: ["KRI", "PRD", "MUN", "COK"],
+  CHE: ["KRI", "COK", "VIZ"],
+  KRI: ["VIZ", "COK", "CHE"],
+  KDP: ["MUN", "PRD", "JNP"],
+  PRD: ["VIZ", "KRI", "JNP"],
+  MUN: ["KDP", "JNP", "PRD"],
+  JNP: ["MUN", "KDP", "PRD"],
+  COK: ["KRI", "CHE", "VIZ"]
+};
 
 const VESSELS = [
-  { id: "HS", name: "Handysize", cap: 35, fuelDay: 21, speedDes: 13.0, rent: 10500, co2: 3.20, ports: ["VIZ", "KRI", "KDP", "PRD"], avail: 92, draft: 10.0 },
-  { id: "SUP", name: "Supramax", cap: 55, fuelDay: 28, speedDes: 13.5, rent: 14500, co2: 3.06, ports: ["VIZ", "CHE", "KRI", "KDP", "PRD"], avail: 84, draft: 12.5 },
-  { id: "PAN", name: "Panamax", cap: 72, fuelDay: 37, speedDes: 14.0, rent: 17500, co2: 3.02, ports: ["VIZ", "CHE", "KRI", "PRD"], avail: 76, draft: 12.2 },
-  { id: "CAP", name: "Capesize", cap: 145, fuelDay: 74, speedDes: 14.5, rent: 26500, co2: 2.95, ports: ["VIZ", "PRD"], avail: 61, draft: 20.0 }
+  { id: "HS", name: "Handysize", cap: 35, fuelDay: 21, speedDes: 13.0, rent: 10500, co2: 3.20, ports: ["VIZ", "KRI", "KDP", "PRD", "MUN", "COK"], avail: 92, draft: 10.0 },
+  { id: "SUP", name: "Supramax", cap: 55, fuelDay: 28, speedDes: 13.5, rent: 14500, co2: 3.06, ports: ["VIZ", "CHE", "KRI", "KDP", "PRD", "MUN", "JNP", "COK"], avail: 84, draft: 12.5 },
+  { id: "PAN", name: "Panamax", cap: 72, fuelDay: 37, speedDes: 14.0, rent: 17500, co2: 3.02, ports: ["VIZ", "CHE", "KRI", "PRD", "MUN", "JNP", "COK"], avail: 76, draft: 12.2 },
+  { id: "CAP", name: "Capesize", cap: 145, fuelDay: 74, speedDes: 14.5, rent: 26500, co2: 2.95, ports: ["VIZ", "PRD", "MUN"], avail: 61, draft: 18.0 }
 ];
 
 const FUELS = [
@@ -61,9 +89,9 @@ const FUELS = [
 ];
 
 const ROUTES = {
-  A: { id: "A", label: "Route A · direct", dist: 4890, weatherRisk: 38, delay: 6, color: "#22d3ee", desc: "Shorter, moderate weather zone", way: [[149.3, -21.25], [137, -16], [122, -9], [106.5, -1], [95, 7], [88, 14], [83.3, 17.68]] },
-  B: { id: "B", label: "Route B · great-circle offset", dist: 5090, weatherRisk: 21, delay: 0, color: "#34d399", desc: "+4% distance, avoids the storm corridor", way: [[149.3, -21.25], [135, -19], [118, -13], [102, -4], [92, 5], [86, 13], [83.3, 17.68]] },
-  C: { id: "C", label: "Route C · monsoon-avoiding", dist: 5300, weatherRisk: 64, delay: 26, color: "#fbbf24", desc: "Longer northerly detour around persistent swell", way: [[149.3, -21.25], [136, -17.5], [119, -8], [105, 2], [93, 10], [84, 16], [83.3, 17.68]] }
+  A: { id: "A", label: "Route A · direct", dist: 4890, weatherRisk: 38, delay: 6, color: "#22d3ee", desc: "Shortest sea passage, moderate weather zone", way: [[149.3, -21.25], [137, -16], [122, -9], [106.5, -1], [95, 7], [88, 14], [83.3, 17.68]] },
+  B: { id: "B", label: "Route B · offshore lane", dist: 5090, weatherRisk: 21, delay: 0, color: "#34d399", desc: "Slightly longer parallel lane, clear of the storm corridor", way: [[149.3, -21.25], [135, -19], [118, -13], [102, -4], [92, 5], [86, 13], [83.3, 17.68]] },
+  C: { id: "C", label: "Route C · monsoon-avoiding", dist: 5300, weatherRisk: 64, delay: 26, color: "#fbbf24", desc: "Longer alternate corridor around persistent swell", way: [[149.3, -21.25], [136, -17.5], [119, -8], [105, 2], [93, 10], [84, 16], [83.3, 17.68]] }
 };
 
 const DEMAND_MONTHS = [

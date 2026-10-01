@@ -346,7 +346,10 @@
   }
   function arcPoints(a, b) {
     const pts = [];
-    const N = 48;
+    /* Sample count scales with how far the hop actually reaches, so a lane with
+       many short surveyed waypoints costs no more to draw than a sparse one. */
+    const ang = Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
+    const N = Math.max(4, Math.min(48, Math.ceil(ang * 26)));
     for (let i = 0; i <= N; i++) {
       const w = slerp(a, b, i / N);
       const p = project(w);
@@ -551,7 +554,7 @@
       }
       if (hit) {
         const name = hit.label.replace(/^(Load|Discharge)\u00b7 /, "");
-        if (PORTS && PORTS.find((q) => q.id === name)) {
+        if (PORTS && Object.values(PORTS).some((q) => q.name === name)) {
           if (renderPortModal) renderPortModal(name);
           else loadInfoModal(name);
         } else {
@@ -658,10 +661,17 @@
   function laneCenter() {
     const l = activeLane();
     const w = l.way;
-    let sx = 0, sy = 0, sz = 0;
-    w.forEach((p) => { const v = ll(p[1], p[0]); sx += v[0]; sy += v[1]; sz += v[2]; });
-    const n = w.length;
-    const v = [sx / n, sy / n, sz / n];
+    /* weight each waypoint by the length of the legs meeting it, so uneven vertex
+       spacing (a surveyed strait has many) does not drag the focus off the voyage */
+    let sx = 0, sy = 0, sz = 0, tw = 0;
+    for (let i = 0; i < w.length; i++) {
+      const p = w[i];
+      const prev = w[i > 0 ? i - 1 : 0], next = w[i < w.length - 1 ? i + 1 : w.length - 1];
+      const wt = Math.hypot(next[0] - prev[0], next[1] - prev[1]);
+      const v = ll(p[1], p[0]);
+      sx += v[0] * wt; sy += v[1] * wt; sz += v[2] * wt; tw += wt;
+    }
+    const v = tw > 0 ? [sx / tw, sy / tw, sz / tw] : [0, 0, 0];
     const m = Math.hypot(v[0], v[1], v[2]) || 1;
     v[0] /= m; v[1] /= m; v[2] /= m;
     return { lat: Math.asin(v[2]) / D2R, lng: Math.atan2(v[1], v[0]) / D2R };

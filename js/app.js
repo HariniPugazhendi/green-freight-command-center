@@ -211,27 +211,49 @@
   }
 
   /* ---------------- HOME ---------------- */
-  const SECTIONS = [
-    ["freight", "📈", "Freight Intelligence", "forecast · charter · savings", "#1d4ed8", "#dbeafe"],
-    ["cargo", "📦", "Cargo Demand", "seasonality · growth", "#b91c1c", "#fee2e2"],
-    ["ports", "⚓", "Port Intelligence", "congestion · berths · alternatives", "#0e7490", "#cffafe"],
-    ["weather", "⛅", "Weather & Disruption", "ETA · cost impact", "#c2410c", "#ffedd5"],
-    ["vessels", "⬢", "Vessel Selector", "capacity · cost · ETA", "#15803d", "#dcfce7"],
-    ["fuel", "⛽", "Fuel & Emissions", "fuel · speed · CO₂", "#6d28d9", "#ede9fe"],
-    ["map", "🗺️", "Route Map", "3D voyage globe", "#4338ca", "#e0e7ff"],
-    ["quantum", "⚛️", "Quantum Optimizer", "annealing vs grid search", "#be185d", "#fce7f3"],
-    ["whatif", "◈", "What-If Simulator", "scenario stress-test", "#b45309", "#fef3c7"],
-    ["decision", "🎯", "AI Decision Center", "one explained plan", "#a16207", "#fef9c3"]
+  // Grouped to match the sidebar taxonomy, so the dashboard and the nav agree
+  // on where a module lives instead of listing ten tiles in one flat row.
+  // [view, icon, label, blurb, accent, tint]
+  const MODULE_GROUPS = [
+    { title: "Overview", blurb: "the voyage and the plan", items: [
+      ["map", "🗺️", "Route Map", "3D voyage globe", "#4338ca", "#e0e7ff"],
+      ["decision", "🎯", "AI Decision Center", "one explained plan", "#a16207", "#fef9c3"]
+    ]},
+    { title: "Market", blurb: "rates and cargo demand", items: [
+      ["freight", "📈", "Freight Intelligence", "forecast · charter · savings", "#1d4ed8", "#dbeafe"],
+      ["cargo", "📦", "Cargo Demand", "seasonality · growth", "#b91c1c", "#fee2e2"]
+    ]},
+    { title: "Operations", blurb: "port and weather reality", items: [
+      ["ports", "⚓", "Port Intelligence", "congestion · berths · alternatives", "#0e7490", "#cffafe"],
+      ["weather", "⛅", "Weather & Disruption", "ETA · cost impact", "#c2410c", "#ffedd5"]
+    ]},
+    { title: "Fleet & Green", blurb: "vessel, speed and fuel", items: [
+      ["vessels", "⬢", "Vessel Selector", "capacity · cost · ETA", "#15803d", "#dcfce7"],
+      ["fuel", "⛽", "Fuel & Emissions", "fuel · speed · CO₂", "#6d28d9", "#ede9fe"]
+    ]},
+    { title: "Optimize", blurb: "search harder, stress-test", items: [
+      ["quantum", "⚛️", "Quantum Optimizer", "annealing vs grid search", "#be185d", "#fce7f3"],
+      ["whatif", "◈", "What-If Simulator", "scenario stress-test", "#b45309", "#fef3c7"]
+    ]}
   ];
-  function renderHome() {
-    if (!window.R) return;
-    const r = window.R;
-    $("#secMosaic").innerHTML = SECTIONS.map((s) =>
-      "<button class='sec' style='--ac:" + s[4] + ";--bg:" + s[5] + ";background:" + s[5] + "' data-go='" + s[0] + "'" +
+  const SECTIONS = MODULE_GROUPS.reduce((all, g) => all.concat(g.items), []);
+
+  function tile(s, n) {
+    return "<button class='sec' style='--ac:" + s[4] + ";--bg:" + s[5] + ";background:" + s[5] + ";animation-delay:" + (n * 0.02).toFixed(2) + "s' data-go='" + s[0] + "'" +
       "><i class='bar' style='background:" + s[4] + "'></i>" +
       "<span class='ico' style='color:" + s[4] + ";background:rgba(255,255,255,.65)'>" + s[1] + "</span>" +
       "<span class='tx'><b>" + s[2] + "</b><small>" + s[3] + "</small></span>" +
-      "<em style='background:" + s[4] + "'>open →</em></button>").join("");
+      "<em style='background:" + s[4] + "'>open →</em></button>";
+  }
+
+  function renderHome() {
+    if (!window.R) return;
+    const r = window.R;
+    $("#secMosaic").innerHTML = MODULE_GROUPS.map((g) =>
+      "<section class='mod-group'>" +
+        "<div class='mod-group-h'><b>" + g.title + "</b><span>" + g.blurb + "</span></div>" +
+        "<div class='tiles'>" + g.items.map(tile).join("") + "</div>" +
+      "</section>").join("");
     const kpis = [
       { l: "Current freight", v: fmtRate(r.market.ser[0]), s: "trend " + r.market.trend.label, d: r.market.trend.dir === "down" ? "down" : "", bg: "#dbeafe", ac: "#1d4ed8" },
       { l: "Predicted · 15d", v: fmtRate(r.market.ser[15]), s: r.market.trend.emo + " " + r.market.trend.label, d: "", bg: "#e0e7ff", ac: "#4338ca" },
@@ -258,12 +280,6 @@
       ["Total", IN_K(r.rec.total)],
       ["Risk", r.risk.band.label]
     ].map((x) => "<div style='display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #e7edf5'><span style='color:#5b6b85'>" + x[0] + "</span><b>" + x[1] + "</b></div>").join("");
-    $("#quickLaunch").innerHTML = [
-      ["📈", "Freight Intelligence", "forecast · charter timing · savings", "freight"],
-      ["⚓", "Port Intelligence", "congestion · berths · alternatives", "ports"],
-      ["☁", "Weather & Disruption", "ETA and cost impact", "weather"],
-      ["⬢", "Vessel & Fuel", "select vessel, speed, green fuel", "fuel"]
-    ].map((q) => "<div class='card'><div style='font-size:20px'>" + q[0] + "</div><div class='lbl' style='font:700 12px/1.3 system-ui;color:#16324f;margin:8px 0 4px'>" + q[1] + "</div><div class='sub' style='color:#5b6b85;font-size:11.5px'>" + q[2] + "</div><button class='btn small ghost' style='margin-top:12px;width:100%' data-go='" + q[3] + "'>Open →</button></div>").join("");
   }
 
   async function runDemo() {
@@ -496,12 +512,12 @@
       [["Load port", shortPort(from.name), fmtLL([from.lng, from.lat])],
        ["Discharge port", to.name, fmtLL([to.lng, to.lat])],
        ["Route drawn", rr.label, wps.length + " surveyed waypoints"],
-       ["Great-circle distance", (laneGeom ? laneGeom.base : rr.dist).toLocaleString("en-IN") + " nm", "via " + fmtLL(mid)],
+       ["Sea distance sailed", rr.dist.toLocaleString("en-IN") + " nm", "great circle " + (laneGeom ? laneGeom.base : rr.dist).toLocaleString("en-IN") + " nm · mid-leg " + fmtLL(mid)],
        ["Recommended plan", r.rec.route.label, r.rec.vessel.name + " · " + r.rec.speed.toFixed(1) + " kn"]
       ].map((x) => "<div><div style='color:#5b6b85;font-size:10px;letter-spacing:.1em;text-transform:uppercase'>" + x[0] + "</div>" +
         "<div style='font:800 15px/1.4 system-ui'>" + x[1] + "</div>" +
         "<div style='color:#7a8aa0;font:600 11px/1.3 var(--mono)'>" + x[2] + "</div></div>").join("") + "</div>" +
-      "<p class='sim-note' style='margin-top:10px'>Each route is rebuilt from your actual load port to the port the plan really discharges at, so the line on the globe is the voyage the engine priced. The highlighted lane is the one in your current plan; use the Route A/B/C buttons to inspect the alternatives.</p>";
+      "<p class='sim-note' style='margin-top:10px'>Each route is rebuilt from your actual load port to the port the plan really discharges at, and every waypoint is inside navigable water or a real strait, so the line never crosses land. The highlighted lane is the one in your current plan; use the Route A/B/C buttons to inspect the alternatives.</p>";
   }
   function renderMapLegend() {
     const r = window.R; if (!r) return;
@@ -692,12 +708,14 @@
   }
 
   /* ---------------- PORT MODAL ---------------- */
-  function renderPortModal(name, ev) {
-    const p = PORTS[name] || Object.values(PORTS).find((x) => x.name === name);
+  function renderPortModal(nameOrId, ev) {
+    // Callers pass either a port id (cards) or a port name (globe markers).
+    const id = PORTS[nameOrId] ? nameOrId : (Object.keys(PORTS).find((k) => PORTS[k].name === nameOrId) || "");
+    const p = PORTS[id];
     const modal = $("#portModal");
-    if (!p) { loadInfoModal(name); return; }
-    const pm = portModel(derivedState(), name);
-    const alt = PORT_ALT[name];
+    if (!p) { loadInfoModal(nameOrId); return; }
+    const pm = portModel(derivedState(), id);
+    const alt = PORT_ALT[id];
     $("#portModalBody").innerHTML = "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'><b style='font-size:17px'>" + p.name + "</b><button class='btn small ghost' id='pmClose'>✕</button></div>" +
       "<table class='tbl'><tbody>" + [
         ["Congestion", pm.congestion.toFixed(0) + "/100"], ["Expected waiting", Math.round(pm.wait) + " hrs"],

@@ -73,13 +73,26 @@ function shiftNm(p, a, b, nm) {
   return { lat: p.lat + dLat, lng: p.lng + dLng };
 }
 /* Rebuilds every route so its path really runs from the chosen load port to the chosen
-   discharge port. A = straight great-circle, B = offset corridor, C = wide northerly detour. */
+   discharge port. Paths come from SEA_ROUTES, which is derived from the ocean texture
+   so a voyage never crosses land: A = shortest sea passage, B = a nearby parallel lane,
+   C = a longer, different corridor. Falls back to a great circle only if a lane is
+   missing, so the app can never end up with an empty route. */
 function syncRoutes(o, d) {
   const A = o || ORIGINS[0], B = d || DESTINATIONS[0];
   const base = haversineNm(A, B);
+  const key = A.id + ">" + B.id;
+  const lane = (typeof SEA_ROUTES !== "undefined" && SEA_ROUTES[key]) || null;
   const OFF = { A: 0, B: 140, C: 480 }, SGN = { A: 0, B: -1, C: 1 };
   Object.keys(ROUTES).forEach((k) => {
-    const r = ROUTES[k], off = OFF[k] || 0, sgn = SGN[k] || 0, N = 9, pts = [];
+    const r = ROUTES[k];
+    const sea = lane && lane[k];
+    if (sea && sea.w && sea.w.length > 1) {
+      r.way = sea.w;
+      r.dist = sea.d;
+      r.seaPath = true;
+      return;
+    }
+    const off = OFF[k] || 0, sgn = SGN[k] || 0, N = 9, pts = [];
     for (let i = 0; i <= N; i++) {
       const t = i / N;
       let p = gcPoint(A, B, t);
@@ -88,8 +101,9 @@ function syncRoutes(o, d) {
     }
     r.way = pts;
     r.dist = Math.round(base + Math.abs(off) * 0.62);
+    r.seaPath = false;
   });
-  return { base: Math.round(base), from: A, to: B };
+  return { base: Math.round(base), sea: !!lane, from: A, to: B };
 }
 function lanePremium(S) {
   const nm = haversineNm(S.origin, S.dest);
