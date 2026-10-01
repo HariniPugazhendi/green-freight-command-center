@@ -9,27 +9,27 @@
 window.DEMO = true;
 
 const ORIGINS = [
-  { id: "AUS", name: "Australia (Hay Point / Newcastle)", lat: -21.25, lng: 149.3 },
-  { id: "BRA", name: "Brazil (Tubarao)", lat: -28.24, lng: -48.65 },
-  { id: "SA", name: "South Africa (Richards Bay)", lat: -28.78, lng: 32.03 },
-  { id: "IDN", name: "Indonesia (Balikpapan)", lat: -1.26, lng: 116.83 },
-  { id: "CHN", name: "China (Qinhuangdao)", lat: 39.93, lng: 119.67 }
+  { id: "AUS", name: "Australia (Hay Point / Newcastle)", lat: -21.25, lng: 149.3, rateAdj: 9.4 },
+  { id: "BRA", name: "Brazil (Tubarao)", lat: -28.24, lng: -48.65, rateAdj: 11.2 },
+  { id: "SA", name: "South Africa (Richards Bay)", lat: -28.78, lng: 32.03, rateAdj: 7.1 },
+  { id: "IDN", name: "Indonesia (Balikpapan)", lat: -1.26, lng: 116.83, rateAdj: 3.2 },
+  { id: "CHN", name: "China (Qinhuangdao)", lat: 39.93, lng: 119.67, rateAdj: 5.1 }
 ];
 
 const DESTINATIONS = [
-  { id: "VIZ", name: "Visakhapatnam", lat: 17.68, lng: 83.3 },
-  { id: "CHE", name: "Chennai", lat: 13.08, lng: 80.29 },
-  { id: "KRI", name: "Krishnapatnam", lat: 14.27, lng: 80.13 },
-  { id: "KDP", name: "Kandla", lat: 23.03, lng: 70.22 },
-  { id: "PRD", name: "Paradip", lat: 20.24, lng: 86.68 }
+  { id: "VIZ", name: "Visakhapatnam", lat: 17.68, lng: 83.3, rateAdj: 0 },
+  { id: "CHE", name: "Chennai", lat: 13.08, lng: 80.29, rateAdj: 1.9 },
+  { id: "KRI", name: "Krishnapatnam", lat: 14.27, lng: 80.13, rateAdj: -0.5 },
+  { id: "KDP", name: "Kandla", lat: 23.03, lng: 70.22, rateAdj: 1.1 },
+  { id: "PRD", name: "Paradip", lat: 20.24, lng: 86.68, rateAdj: 0.4 }
 ];
 
 const CARGO_TYPES = [
-  { id: "iro", name: "Iron ore", density: 1.0 },
-  { id: "coal", name: "Thermal coal", density: 0.88 },
-  { id: "coke", name: "Metallurgical coke", density: 0.94 },
-  { id: "wheat", name: "Wheat / grains", density: 0.72 },
-  { id: "fert", name: "Fertilizer", density: 0.9 }
+  { id: "iro", name: "Iron ore", density: 1.0, rateAdj: 0 },
+  { id: "coal", name: "Thermal coal", density: 0.88, rateAdj: -1.1 },
+  { id: "coke", name: "Metallurgical coke", density: 0.94, rateAdj: 0.5 },
+  { id: "wheat", name: "Wheat / grains", density: 0.72, rateAdj: 2.7 },
+  { id: "fert", name: "Fertilizer", density: 0.9, rateAdj: 1.8 }
 ];
 
 const PORTS = {

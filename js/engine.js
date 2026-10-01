@@ -21,7 +21,7 @@ function fmtT(n) { return Math.round(n).toLocaleString("en-IN") + " t"; }
 function pct(n) { return Math.round(n * 100); }
 
 function rateSeries(S) {
-  const r0 = RATE_SERIES.cur * S.rateK;
+  const r0 = laneAdj(S) * S.rateK;
   const demandK = 1 + 0.055 * S.demandDelta;            // demand shifts market tightness
   const out = [];
   for (let d = 0; d <= 60; d++) {
@@ -40,11 +40,29 @@ function trendOf(series) {
   return { dir: "stable", label: "Stable", emo: "\u{1F7E1}", cls: "warn" };
 }
 
-function laneAdj(S) {
-  const base = (S.origin.id === "AUS" || S.origin.id === "BRA") ? 0 : 2.4;
-  const dest = (S.dest.id === "CHE") ? 1.6 : 0;
-  return RATE_SERIES.cur + base + dest;
+function haversineNm(a, b) {
+  const R = 3440.065, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
+function shortPort(nm) { return nm.replace(/\s*\(.*\)/, ""); }
+function lanePremium(S) {
+  const nm = haversineNm(S.origin, S.dest);
+  const dist = (nm / 1000) * 1.15;
+  const load = S.origin.rateAdj || 0, disc = S.dest.rateAdj || 0, cg = S.cargoType.rateAdj || 0;
+  return {
+    nm: Math.round(nm), total: load + disc + dist + cg,
+    parts: [
+      { k: "Load port · " + shortPort(S.origin.name), v: load },
+      { k: "Discharge port · " + S.dest.name, v: disc },
+      { k: "Distance · " + Math.round(nm).toLocaleString("en-IN") + " nm", v: dist },
+      { k: "Cargo · " + S.cargoType.name, v: cg }
+    ]
+  };
+}
+function laneAdj(S) { return RATE_SERIES.cur + lanePremium(S).total; }
 
 function portModel(S, destId) {
   const p = PORTS[destId] || PORTS.VIZ;
@@ -344,7 +362,7 @@ function computeAll(S) {
   const bestFuel = fuelBrowser[0];
 
   const ser = rateSeries(S);
-  const market = { ser, trend: trendOf(ser), cur: rateFor(0, S), lane: laneAdj(S) };
+  const market = { ser, trend: trendOf(ser), cur: rateFor(0, S), lane: laneAdj(S), laneBreak: lanePremium(S) };
   const window = charterWindow(S);
   const cargo = cargoModel(S);
   const risk = voyageRisk(S, market, pm, wm, rec.vessel);

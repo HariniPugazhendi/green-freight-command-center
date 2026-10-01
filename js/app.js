@@ -295,6 +295,14 @@
     $("#frF15").textContent = fmtRate(m.ser[15]);
     $("#frTrend").innerHTML = "today " + fmtRate(m.ser[0]) + " → 15d " + fmtRate(m.ser[15]) + " <span class='" + m.trend.cls + "'>" + m.trend.emo + "</span>";
     $("#frConf").textContent = r.window.conf + "%";
+    const lb = m.laneBreak;
+    const row = (k, v, strong) => "<div style='display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-bottom:1px solid #e7edf5'><span style='color:#5b6b85'>" + k + "</span><b" + (strong ? " style='font:800 13px/1 var(--mono)'" : " style='font:700 12.5px/1 var(--mono)'" ) + ">" + v + "</b></div>";
+    $("#frLane").innerHTML =
+      row("Base index (simulated Baltic-style)", fmtRate(RATE_SERIES.cur)) +
+      lb.parts.map((p) => row(p.k, (p.v >= 0 ? "+" : "-") + "₹" + Math.abs(p.v).toFixed(2))).join("") +
+      row("Lane rate today", fmtRate(m.cur), true) +
+      "<p class='sim-note' style='margin-top:10px'><b>" + shortPort(state.origin.name) + " → " + state.dest.name + "</b> · " + lb.nm.toLocaleString("en-IN") +
+      " nm great-circle. Change load port, destination or cargo type above and this lane re-prices instantly — the whole forecast, window and saving move with it.</p>";
     CK.line($("#frChart"), {
       labels: ["0", "7", "15", "30", "60"], dots: true,
       series: [{ pts: [0, 7, 15, 30, 60].map((d) => m.ser[d]), color: "#22d3ee" }]
