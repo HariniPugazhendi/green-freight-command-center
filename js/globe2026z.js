@@ -240,7 +240,7 @@
           continue;
         }
         const z = Math.sqrt(1 - rs);
-        uvw[0] = dx; uvw[1] = dy; uvw[2] = z;
+        uvw[0] = dx; uvw[1] = -dy; uvw[2] = z;
         const wn = toWorld(uvw);
         const lat = Math.asin(wn[2]);
         let lng = Math.atan2(wn[1], wn[0]);
